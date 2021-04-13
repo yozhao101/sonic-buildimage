@@ -1,0 +1,6 @@
+#!/bin/bash
+
+CFGGEN_PARAMS=" \
+    -d -t /usr/share/sonic/templates/monit_radv.j2,/etc/monit/conf.d/monit_radv \
+"
+sonic-cfggen $CFGGEN_PARAMS

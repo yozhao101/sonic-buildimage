@@ -319,7 +319,6 @@ sudo chmod 755 $FILESYSTEM_ROOT/usr/bin/container_checker
 sudo cp $IMAGE_CONFIGS/monit/generate_monit_config.service $FILESYSTEM_ROOT_USR_LIB_SYSTEMD_SYSTEM
 sudo cp $IMAGE_CONFIGS/monit/generate_monit_config $FILESYSTEM_ROOT/usr/bin/
 sudo chmod 755 $FILESYSTEM_ROOT/usr/bin/generate_monit_config
-s
 
 # Install custom-built openssh sshd
 sudo dpkg --root=$FILESYSTEM_ROOT -i $debs_path/openssh-server_*.deb

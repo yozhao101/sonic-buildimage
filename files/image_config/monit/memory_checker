@@ -3,6 +3,7 @@ import argparse
 import subprocess
 import sys
 import syslog
+import re
 
 
 def get_command_result(command):
@@ -21,11 +22,12 @@ def get_command_result(command):
                                          shell=True, universal_newlines=True)
         command_stdout, command_stderr = proc_instance.communicate()
         if proc_instance.returncode != 0:
-            syslog.syslog(syslog.LOG_ERR, "Failed to execute the command '{}'. Return code: '{}'".format(
-                          command, proc_instance.returncode))
+            syslog.syslog(syslog.LOG_ERR, "[memory_checker] Failed to execute the command '{}'. Return code: '{}'"
+                          .format(command, proc_instance.returncode))
             sys.exit(1)
     except (OSError, ValueError) as err:
-        syslog.syslog(syslog.LOG_ERR, "Failed to execute the command '{}'. Error: '{}'".format(command, err))
+        syslog.syslog(syslog.LOG_ERR, "[memory_checker] Failed to execute the command '{}'. Error: '{}'"
+                      .format(command, err))
         sys.exit(2)
 
     return command_stdout.strip()
@@ -37,7 +39,7 @@ def check_memory_usage(container_name, threshold_value):
 
     Args:
         container_name: A string represtents name of a container
-        threshold_value: An integer indicates the threshold value of memory usage.
+        threshold_value: An integer indicates the threshold value (Bytes) of memory usage.
 
     Returns:
         None.
@@ -45,27 +47,36 @@ def check_memory_usage(container_name, threshold_value):
     command = "docker stats --no-stream --format \{{\{{.MemUsage\}}\}} {}".format(container_name)
     command_stdout = get_command_result(command)
     mem_usage = command_stdout.split("/")[0].strip()
-    mem_usage_value = float(mem_usage[:-3])
-    mem_usage_unit = mem_usage[-3:]
+    match_obj = re.match(r"\d+\.?\d*", mem_usage)
+    if match_obj:
+        mem_usage_value = float(mem_usage[match_obj.start():match_obj.end()])
+        mem_usage_unit = mem_usage[match_obj.end():]
 
-    mem_usage_bytes = 0.0
-    if mem_usage_unit == "KiB":
-        mem_usage_bytes = mem_usage_value * 1024
-    elif mem_usage_unit == "MiB":
-        mem_usage_bytes = mem_usage_value * 1024 ** 2 
-    elif mem_usage_unit == "GiB":
-        mem_usage_bytes = mem_usage_value * 1024 ** 3 
+        mem_usage_bytes = 0.0
+        if mem_usage_unit == "B":
+            mem_usage_bytes = mem_usage_value
+        elif mem_usage_unit == "KiB":
+            mem_usage_bytes = mem_usage_value * 1024
+        elif mem_usage_unit == "MiB":
+            mem_usage_bytes = mem_usage_value * 1024 ** 2 
+        elif mem_usage_unit == "GiB":
+            mem_usage_bytes = mem_usage_value * 1024 ** 3 
 
-    if mem_usage_bytes > threshold_value:
-        print("[{}]: Memory usage ({} Bytes) is larger than the threshold ({} Bytes)!"
-              .format(container_name, mem_usage_bytes, threshold_value))
-        sys.exit(3)
-
+        if mem_usage_bytes > threshold_value:
+            print("[{}]: Memory usage ({} Bytes) is larger than the threshold ({} Bytes)!"
+                  .format(container_name, mem_usage_bytes, threshold_value))
+            sys.exit(3)
+    else:
+        syslog.syslog(syslog.LOG_ERR, "[memory_checker] Failed to retrieve memory value from '{}'"
+                      .format(mem_usage))
+        sys.exit(4)
+ 
 
 def main():
     parser = argparse.ArgumentParser(description="Check memory usage of a container \
             and an alerting message will be written into syslog if memory usage \
-            is larger than the threshold value", usage="/usr/bin/memory_checker <container_name> <threshold_value>")
+            is larger than the threshold value", 
+            usage="/usr/bin/memory_checker <container_name> <threshold_value_in_bytes>")
     parser.add_argument("container_name", help="container name")
     # TODO: Currently the threshold value is hard coded as a command line argument and will
     # remove this in the new version since we want to read this value from 'CONFIG_DB'.

@@ -58,9 +58,9 @@ def check_memory_usage(container_name, threshold_value):
         elif mem_usage_unit == "KiB":
             mem_usage_bytes = mem_usage_value * 1024
         elif mem_usage_unit == "MiB":
-            mem_usage_bytes = mem_usage_value * 1024 ** 2 
+            mem_usage_bytes = mem_usage_value * 1024 ** 2
         elif mem_usage_unit == "GiB":
-            mem_usage_bytes = mem_usage_value * 1024 ** 3 
+            mem_usage_bytes = mem_usage_value * 1024 ** 3
 
         if mem_usage_bytes > threshold_value:
             print("[{}]: Memory usage ({} Bytes) is larger than the threshold ({} Bytes)!"
@@ -70,13 +70,12 @@ def check_memory_usage(container_name, threshold_value):
         syslog.syslog(syslog.LOG_ERR, "[memory_checker] Failed to retrieve memory value from '{}'"
                       .format(mem_usage))
         sys.exit(4)
- 
+
 
 def main():
     parser = argparse.ArgumentParser(description="Check memory usage of a container \
             and an alerting message will be written into syslog if memory usage \
-            is larger than the threshold value", 
-            usage="/usr/bin/memory_checker <container_name> <threshold_value_in_bytes>")
+            is larger than the threshold value", usage="/usr/bin/memory_checker <container_name> <threshold_value_in_bytes>")
     parser.add_argument("container_name", help="container name")
     # TODO: Currently the threshold value is hard coded as a command line argument and will
     # remove this in the new version since we want to read this value from 'CONFIG_DB'.
